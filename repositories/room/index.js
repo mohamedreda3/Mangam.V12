@@ -6,7 +6,7 @@ const pusher = require("../../pusher");
 const { wss } = require("../../socket");
 
 module.exports = class {
-  constructor() { }
+  constructor() {}
   async make(data) {
     const offers = await doQuery("SELECT * FROM offers WHERE id = ?", [
       data?.offer_id,
@@ -142,9 +142,7 @@ module.exports = class {
       ) {
         return { status: 0, message: "Offer Endded" };
       }
-
     }
-
 
     // التحقق من وجود المستخدم في الغرفة
     const userInRoomQuery =
@@ -157,9 +155,7 @@ module.exports = class {
     );
 
     if (oldRooms?.length == roomExistResult[0]?.max_members) {
-
       return { status: 0, message: "Room already completed" };
-
     }
     if (userInRoomResult.length > 0) {
       return { status: 0, message: "You are already joined in this room" };
@@ -206,7 +202,6 @@ module.exports = class {
       const getOffer = await doQuery("SELECT * FROM offers WHERE id = ?", [
         offer_id,
       ]);
-      
 
       if (newRooms?.length == roomExistResult[0]?.max_members) {
         pusher.trigger("my-channel", "startTender", {
@@ -225,7 +220,7 @@ module.exports = class {
             );
           }
         );
-        const offerProductsDetails = (JSON.parse(getOffer[0]?.varients))
+        const offerProductsDetails = JSON.parse(getOffer[0]?.varients);
 
         if (getOffer[0]?.isTendered) {
           await doQuery("UPDATE offers SET started = ? WHERE id = ?", [
@@ -233,44 +228,60 @@ module.exports = class {
             getOffer[0]?.id,
           ]);
           const scheduledDate = new Date(getOffer[0]?.rate_time);
-          const job = cron.schedule(`*/${getOffer[0]?.rate_time / 1000} * * * * *`, async () => {
-            const offerSelected = await doQuery("SELECT * FROM offers WHERE id = ?", [
-              getOffer[0]?.id,
-            ]);
-            if (!offerSelected[0]?.hold && !offerSelected[0]?.stopped&& !offerSelected[0]?.success&& !offerSelected[0]?.archive) {
-              let varients = JSON.parse(offerSelected[0]?.varients);
-              for (let i = 0; i < varients.length; i++) {
-                const item = varients[i];
-                const newPrice = parseFloat(item.new_price);
-                const minPrice = parseFloat(item.min_price);
-                const rateTime = parseInt(offerSelected[0]?.rate_time);
-                const rateMoney = parseFloat(item.rate_money);
+          const job = cron.schedule(
+            `*/${getOffer[0]?.rate_time / 1000} * * * * *`,
+            async () => {
+              const offerSelected = await doQuery(
+                "SELECT * FROM offers WHERE id = ?",
+                [getOffer[0]?.id]
+              );
+              if (
+                !offerSelected[0]?.hold &&
+                !offerSelected[0]?.stopped &&
+                !offerSelected[0]?.success &&
+                !offerSelected[0]?.archive &&
+                !(parseFloat(item.new_price) > parseFloat(item.min_price))
+              ) {
+                let varients = JSON.parse(offerSelected[0]?.varients);
+                for (let i = 0; i < varients.length; i++) {
+                  const item = varients[i];
+                  const newPrice = parseFloat(item.new_price);
+                  const minPrice = parseFloat(item.min_price);
+                  const rateTime = parseInt(offerSelected[0]?.rate_time);
+                  const rateMoney = parseFloat(item.rate_money);
 
-                await decreasePrice(
-                  getOffer[0]?.id,
-                  i,
-                  newPrice,
-                  minPrice,
-                  rateTime,
-                  rateMoney
-                );
+                  await decreasePrice(
+                    getOffer[0]?.id,
+                    i,
+                    newPrice,
+                    minPrice,
+                    rateTime,
+                    rateMoney
+                  );
+                  pusher.trigger("my-channel", "priceReduced", {
+                    message: "Price Reduced",
+                    data: [],
+                  });
+                }
+              } else if (
+                offerSelected[0]?.hold &&
+                !offerSelected[0]?.stopped &&
+                !offerSelected[0]?.success &&
+                !offerSelected[0]?.archive
+              ) {
                 pusher.trigger("my-channel", "priceReduced", {
                   message: "Price Reduced",
                   data: [],
                 });
+                setTimeout(async () => {
+                  const holded = await doQuery(
+                    "UPDATE offers SET hold = 0 WHERE id = ?",
+                    [getOffer[0]?.offer_id]
+                  );
+                }, 120000);
               }
-            }else if(offerSelected[0]?.hold&& !offerSelected[0]?.stopped&& !offerSelected[0]?.success&& !offerSelected[0]?.archive){
-              pusher.trigger("my-channel", "priceReduced", {
-                message: "Price Reduced",
-                data: [],
-              });
-              setTimeout(async ()=>{
-                const holded = await doQuery("UPDATE offers SET hold = 0 WHERE id = ?", [
-                  getOffer[0]?.offer_id,
-                ]);
-              }, 120000)
             }
-          });
+          );
           async function decreasePrice(
             offerId,
             varientIndex,
@@ -284,14 +295,14 @@ module.exports = class {
 
             const x = await doQuery(
               "UPDATE offers SET varients = JSON_SET(varients, '$[" +
-              varientIndex +
-              "].new_price', ?) WHERE id = ?",
+                varientIndex +
+                "].new_price', ?) WHERE id = ?",
               [updatedPrice, offerId]
             );
-              pusher.trigger("my-channel", "priceReduced", {
-                message: "Price Reduced",
-                data: [offerId, updatedPrice],
-              });
+            pusher.trigger("my-channel", "priceReduced", {
+              message: "Price Reduced",
+              data: [offerId, updatedPrice],
+            });
 
             const nextTime = moment().add(rateTime, 'minutes');
             const timeDiff = moment(nextTime).diff(moment());
@@ -309,7 +320,6 @@ module.exports = class {
             //   offer_id,
             // ]);
             // let varients = JSON.parse(getOffer[0]?.varients);
-
 
             // }, rateTime);
           }
@@ -330,7 +340,7 @@ module.exports = class {
   async archive(data) {
     const Archive = await doQuery(
       "UPDATE offers SET archive = ? , success = ? , notes = ?  WHERE id = ?",
-      [data?.archive, data?.success, data?.notes,data?.offer_id]
+      [data?.archive, data?.success, data?.notes, data?.offer_id]
     );
     if (Archive?.changedRows) {
       return { status: 1, message: "Offer Editted" };
@@ -358,16 +368,16 @@ module.exports = class {
       [data?.offer_id]
     );
 
- 
-
     try {
-      const getQueues = await doQuery("SELECT * FROM rooms_joined WHERE rooms_id = ?", [getRooms[0]?.room_id]);
-      if (getRooms && getRooms?.length)
-        getRooms[0].participants = getQueues
+      const getQueues = await doQuery(
+        "SELECT * FROM rooms_joined WHERE rooms_id = ?",
+        [getRooms[0]?.room_id]
+      );
+      if (getRooms && getRooms?.length) getRooms[0].participants = getQueues;
       // const getQueuesJoined = await doQuery("SELECT * FROM queue_rooms_joined WHERE queue_id = ?", [getRooms[0]?.queue?.id]);
       // getRooms[0].queue.joiners = getQueuesJoined?.sort((a, b) => a - b)
     } catch (e) {
-      console.log(e)
+      console.log(e);
     }
     const OfferRepository = require("../offer/index");
     const offerRepository = new OfferRepository();
@@ -403,7 +413,6 @@ module.exports = class {
     return { status: 1, message: getRooms };
   }
 
-
   async join_queue(data) {
     const {
       user_id,
@@ -413,10 +422,8 @@ module.exports = class {
       cost,
       rooms_id,
       offer_id,
-      queue_id
+      queue_id,
     } = data;
-
-
 
     // التحقق من وجود المستخدم في الغرفة
     const userInRoomQuery =
@@ -429,9 +436,7 @@ module.exports = class {
     );
 
     if (oldRooms?.length == 5) {
-
       return { status: 0, message: "Queue already completed" };
-
     }
     if (userInRoomResult.length > 0) {
       return { status: 0, message: "You are already joined in this Queue" };
@@ -445,7 +450,7 @@ module.exports = class {
 
       "rooms_id",
       "offer_id",
-      "queue_id"
+      "queue_id",
     ];
     for (const field of requiredFields) {
       if (!data[field]) {
@@ -454,9 +459,12 @@ module.exports = class {
     }
 
     try {
-
-      const selectaya = await doQuery("SELECT * FROM queue_rooms_joined WHERE queue_id = ?", [queue_id]);
-      const new_order_no = selectaya && selectaya?.length ? selectaya[0]?.order_no + 1 : 1;
+      const selectaya = await doQuery(
+        "SELECT * FROM queue_rooms_joined WHERE queue_id = ?",
+        [queue_id]
+      );
+      const new_order_no =
+        selectaya && selectaya?.length ? selectaya[0]?.order_no + 1 : 1;
 
       const query =
         "INSERT INTO queue_rooms_joined (user_id, user_image, user_name, rooms_id, queue_id, order_no) VALUES (?, ?, ?, ?, ?, ?)";
@@ -466,7 +474,7 @@ module.exports = class {
         user_name,
         rooms_id,
         queue_id,
-        new_order_no
+        new_order_no,
       ];
       const JoinQueues = await doQuery(query, values);
       pusher.trigger("my-channel", "newUserJoined", {
@@ -475,7 +483,12 @@ module.exports = class {
 
       if (JoinQueues?.insertId) {
         if (new_order_no == 1 || selectaya[0]?.order_no < 1) {
-          this.changeUserQueueStatus({ user_status: "active", order_no: 1, queue_id: queue_id, user_id })
+          this.changeUserQueueStatus({
+            user_status: "active",
+            order_no: 1,
+            queue_id: queue_id,
+            user_id,
+          });
         }
         // await doQuery("DELETE FROM rooms_joined WHERE user_id = ? AND rooms_id = ?", [
         //   user_id,
@@ -493,7 +506,6 @@ module.exports = class {
   }
 
   async Select_Offer_Rooms_Queue(data) {
-
     const getRooms = await doQuery(
       `SELECT *, JSON_ARRAYAGG(
         JSON_OBJECT(
@@ -548,23 +560,31 @@ module.exports = class {
       'user_name', queue_rooms_joined.user_name,
       'user_image', queue_rooms_joined.user_image
   )
-) AS participants FROM queue_rooms_joined`)
+) AS participants FROM queue_rooms_joined`);
     return { status: 1, message: getRooms };
   }
 
   async changeUserQueueStatus(data) {
-    const selectaya = await doQuery("SELECT * FROM queue_rooms_joined WHERE queue_id = ?", [data?.queue_id]);
+    const selectaya = await doQuery(
+      "SELECT * FROM queue_rooms_joined WHERE queue_id = ?",
+      [data?.queue_id]
+    );
 
-    const update = await doQuery("UPDATE queue_rooms_joined SET user_status = ?, order_no = ? WHERE queue_id = ? AND user_id = ?", [data?.user_status, data?.order_no, selectaya[0]?.queue_id, data?.user_id]);
-    console.log(update, data)
+    const update = await doQuery(
+      "UPDATE queue_rooms_joined SET user_status = ?, order_no = ? WHERE queue_id = ? AND user_id = ?",
+      [data?.user_status, data?.order_no, selectaya[0]?.queue_id, data?.user_id]
+    );
+    console.log(update, data);
     if (update?.affectedRows) {
       if (data?.user_status == "inactive") {
         const resetOrder = await doQuery(
           "UPDATE queue_rooms_joined SET order_no = order_no - 1 WHERE order_no > ? AND queue_id = ?",
           [data?.order_no, data?.queue_id]
         );
-        const updateActive = await doQuery("UPDATE queue_rooms_joined SET user_status = ? WHERE queue_id = ? AND order_no = ?", ["active", data?.queue_id, 1]);
-
+        const updateActive = await doQuery(
+          "UPDATE queue_rooms_joined SET user_status = ? WHERE queue_id = ? AND order_no = ?",
+          ["active", data?.queue_id, 1]
+        );
       }
       pusher.trigger("my-channel", "changedUserQueueStatus", {
         message: "Tender Began",
