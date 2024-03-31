@@ -6,7 +6,7 @@ const pusher = require("../../pusher");
 const schedule = require('node-schedule');
 
 module.exports = class {
-  constructor() { }
+  constructor() {}
   async make(data) {
     const product = await doQuery("SELECT * FROM product WHERE id = ?", [
       data?.product_id,
@@ -106,7 +106,7 @@ module.exports = class {
     if (
       moment(data?.will_av_for).diff(moment()) <= 0 ||
       moment(data?.will_av_after).diff(moment()) >=
-      moment(data?.will_av_for).diff(moment())
+        moment(data?.will_av_for).diff(moment())
     ) {
       return { status: 0, message: "Error In Offer Time" };
     }
@@ -140,12 +140,9 @@ module.exports = class {
     );
     const insertQueue = await doQuery(
       "INSERT INTO offer_rooms_queue SET offer_id = ?,room_id=?",
-      [
-        insertOffer?.insertId,
-        insertRoom?.insertId
-      ]
+      [insertOffer?.insertId, insertRoom?.insertId]
     );
-    console.log(insertQueue)
+    console.log(insertQueue);
     // }
 
     const selectOffer = await doQuery("SELECT * FROM offers WHERE id = ?", [
@@ -287,8 +284,8 @@ module.exports = class {
         offer[0]?.group_id && data?.same
           ? offer[0]?.group_id
           : data?.same
-            ? group?.insertId
-            : null,
+          ? group?.insertId
+          : null,
         data?.shippingStatus ? data?.shippingStatus : offer[0]?.shippingStatus,
       ]
     );
@@ -336,17 +333,15 @@ module.exports = class {
           seconds: will_av_for_in_millSec.seconds(),
           milliSeconds: moment(item.time_av_for).diff(moment()),
         };
-        
+
         if (
           moment(item.will_av_after).diff(moment()) <= 0 &&
           moment(item.will_av_for).diff(moment()) <= 0
         ) {
-        
           if (item.stopped == 1) {
             item.status = "Stopped";
             item.status_ar = "تم إيقافه";
-          } else if (item.
-            archive == 1) {
+          } else if (item.archive == 1) {
             item.status = "Archived";
             item.status_ar = "تمت أرشفته";
           } else if (item.success == 1) {
@@ -356,7 +351,6 @@ module.exports = class {
             item.status = "Expired";
             item.status_ar = "منتهى";
           }
-
         } else {
           if (moment(item.will_av_after).diff(moment()) >= 0) {
             item.status_ar = "غير متاح بعد";
@@ -368,14 +362,13 @@ module.exports = class {
           if (item.stopped == 1) {
             item.status = "Stopped";
             item.status_ar = "تم إيقافه";
-          } else if (item.
-            archive == 1) {
+          } else if (item.archive == 1) {
             item.status = "Archived";
             item.status_ar = "تمت أرشفته";
           } else if (item.success == 1) {
             item.status = "Sold Successfully";
             item.status_ar = "تمت عملية البيع بنجاح";
-          }  else {
+          } else {
             item.status = "Available";
             item.status_ar = "متاح";
           }
@@ -424,9 +417,7 @@ module.exports = class {
                 prop_value[0].old_price = var_item?.old_price;
                 prop_value[0].new_price = var_item?.new_price;
                 props_values.push(prop_value[0]);
-              } catch (e) {
-
-              }
+              } catch (e) {}
             }
           }
           if (!colors.filter((item) => item?.id == var_item?.color_id)[0]) {
@@ -443,7 +434,7 @@ module.exports = class {
           images: images ? images : [],
           customerReviews: customerReviews ? customerReviews : [],
           props: props ? props : [],
-          props_values: props_values ? props_values : []
+          props_values: props_values ? props_values : [],
         });
         item.products = products;
         offers.push(item);
@@ -553,7 +544,10 @@ module.exports = class {
         };
         if (
           (moment(item.will_av_after).diff(moment()) <= 0 &&
-            moment(item.will_av_for).diff(moment()) <= 0) || item?.stopped || item?.archive || item?.success
+            moment(item.will_av_for).diff(moment()) <= 0) ||
+          item?.stopped ||
+          item?.archive ||
+          item?.success
         ) {
           return;
         } else {
@@ -603,9 +597,7 @@ module.exports = class {
                   prop_value[0].old_price = var_item?.old_price;
                   prop_value[0].new_price = var_item?.new_price;
                   props_values.push(prop_value[0]);
-                } catch (e) {
-
-                }
+                } catch (e) {}
               }
             }
             if (!colors.filter((item) => item?.id == var_item?.color_id)[0]) {
@@ -624,7 +616,7 @@ module.exports = class {
             images: images ? images : [],
             customerReviews: customerReviews ? customerReviews : [],
             props: props ? props : [],
-            props_values: props_values ? props_values : []
+            props_values: props_values ? props_values : [],
           });
           item.products = products;
           offers.push(item);
@@ -714,17 +706,15 @@ module.exports = class {
       data?.offer_id,
     ]);
     if (holded?.affectedRows) {
-      const x = await doQuery("Update rooms_joined SET user_status = ? WHERE user_id = ? AND rooms_id = ?", [
-        data?.user_status,
-        data?.user_id,
-        data?.rooms_id,
-      ]);
+      const x = await doQuery(
+        "Update rooms_joined SET user_status = ? WHERE user_id = ? AND rooms_id = ?",
+        [data?.user_status, data?.user_id, data?.rooms_id]
+      );
       pusher.trigger("my-channel", "priceReduced", {
         message: "Price Reduced",
         data: [],
       });
       return { status: 1, message: " Holded Successfully" };
-
     } else {
       return { status: 0, message: "Not Holded Already" };
     }
@@ -734,9 +724,9 @@ module.exports = class {
     if (data?.type != "user") {
       return { status: 0, message: "You Are Not authorized" };
     }
-    const offer = await doQuery(
-      "SELECT * FROM offers WHERE id=?", [data?.offer_id]
-    );
+    const offer = await doQuery("SELECT * FROM offers WHERE id=?", [
+      data?.offer_id,
+    ]);
     if (!offer || !offer?.length) {
       return { status: 0, message: "Offer Not Found" };
     }
@@ -769,9 +759,12 @@ module.exports = class {
           };
           if (
             (moment(item.will_av_after).diff(moment()) <= 0 &&
-              moment(item.will_av_for).diff(moment()) <= 0) || item?.stopped || item?.archive || item?.success
+              moment(item.will_av_for).diff(moment()) <= 0) ||
+            item?.stopped ||
+            item?.archive ||
+            item?.success
           ) {
-            console.log(item)
+            console.log(item);
 
             return;
           } else {
@@ -821,9 +814,7 @@ module.exports = class {
                     prop_value[0].old_price = var_item?.old_price;
                     prop_value[0].new_price = var_item?.new_price;
                     props_values.push(prop_value[0]);
-                  } catch (e) {
-
-                  }
+                  } catch (e) {}
                 }
               }
               if (!colors.filter((item) => item?.id == var_item?.color_id)[0]) {
@@ -842,7 +833,7 @@ module.exports = class {
               images: images ? images : [],
               customerReviews: customerReviews ? customerReviews : [],
               props: props ? props : [],
-              props_values: props_values ? props_values : []
+              props_values: props_values ? props_values : [],
             });
             item.products = products;
             offers.push(item);
@@ -913,25 +904,20 @@ module.exports = class {
     return { status: 1, message: offers };
   }
 
-
-
-
-
   // ==============================================
   async makeOrder(data) {
     const offers = await doQuery("SELECT * FROM offers WHERE id = ?", [
       data?.offer_id,
     ]);
-    
+
     // console.log(offers);
     if (!offers || !offers?.length) {
       return { status: 0, message: "Offer Not Found" };
     }
     // console.log(offers);
-if(!offers[0].hold && offers[0].isTendered){
-  return { status: 0, message: "" };
-
-}
+    if (!offers[0]?.hold && offers[0]?.isTendered) {
+      return { status: 0, message: "" };
+    }
     let varients = JSON.parse(offers[0]?.varients);
 
     let duration = moment.duration(
@@ -1048,10 +1034,10 @@ if(!offers[0].hold && offers[0].isTendered){
         };
         const insertOrder = await doQuery(
           "INSERT INTO orders " +
-          "(product_label, product_id, shipping_time, shipping_price, color_id, user_id, props_ids, " +
-          "props_value_ids, product_price, quantity, payment_method, " +
-          "address, product_total_price,old_price, grand_price, grand_price_without_tax, shipping_id, store, from_offer, offer_id,  userName, userImage, userHash, userLevel, status, tracking_id,shippment_id) " +
-          "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?,?,?, ?,?,?)",
+            "(product_label, product_id, shipping_time, shipping_price, color_id, user_id, props_ids, " +
+            "props_value_ids, product_price, quantity, payment_method, " +
+            "address, product_total_price,old_price, grand_price, grand_price_without_tax, shipping_id, store, from_offer, offer_id,  userName, userImage, userHash, userLevel, status, tracking_id,shippment_id) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?,?,?, ?,?,?)",
           [
             insertedDataObject.product_label,
             insertedDataObject.product_id,
@@ -1091,6 +1077,20 @@ if(!offers[0].hold && offers[0].isTendered){
         }
 
         if (insertOrder?.affectedRows) {
+          try {
+            if (offers[0]?.isTendered) {
+              await doQuery(
+                "UPDATE offers SET success = ?, notes = ? WHERE id = ?",
+                [
+                  1,
+                  data?.userName + " -- succeeded in purchasing the offer",
+                  offers[0]?.id,
+                ]
+              );
+            }
+          } catch (e) {
+            cobsole.log(e);
+          }
           return {
             status: 1,
             message: "Succefully",
@@ -1147,14 +1147,15 @@ if(!offers[0].hold && offers[0].isTendered){
         data?.offer_id,
         notifyDate,
         "The Offer Number #" +
-        offers[0]?.id +
-        "  is Available Go To Explore This Offer..!",
+          offers[0]?.id +
+          "  is Available Go To Explore This Offer..!",
       ]
     );
 
     const scheduledDate = new Date(notifyDate);
-    const cronSchedulePattern = `${scheduledDate.getMinutes()} ${scheduledDate.getHours()} ${scheduledDate.getDate()} ${scheduledDate.getMonth() + 1
-      } *`;
+    const cronSchedulePattern = `${scheduledDate.getMinutes()} ${scheduledDate.getHours()} ${scheduledDate.getDate()} ${
+      scheduledDate.getMonth() + 1
+    } *`;
 
     // Schedule the job to run only once on the specified date and time.
     cron.schedule(
@@ -1166,8 +1167,8 @@ if(!offers[0].hold && offers[0].isTendered){
           [
             data?.user_id,
             "The Offer Number #" +
-            offers[0]?.id +
-            " Are Be Available Go To Explore This Offer..!",
+              offers[0]?.id +
+              " Are Be Available Go To Explore This Offer..!",
             "/otherof",
           ]
         );
